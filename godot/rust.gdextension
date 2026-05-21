@@ -1,0 +1,20 @@
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = 4.6
+reloadable = true
+
+[libraries]
+linux.debug.x86_64 =         "res://../rust/target/debug/librustext.so"
+linux.release.x86_64 =       "res://../rust/target/release/librustext.so"
+windows.debug.x86_64 =       "res://../rust/target/debug/rustext.dll"
+windows.release.x86_64 =     "res://../rust/target/release/rustext.dll"
+macos.debug =                "res://../rust/target/debug/librustext.dylib"
+macos.release =              "res://../rust/target/release/librustext.dylib"
+macos.debug.arm64 =          "res://../rust/target/debug/librustext.dylib"
+macos.release.arm64 =        "res://../rust/target/release/librustext.dylib"
+web.debug.threads.wasm32 =   "res://../rust/target/wasm32-unknown-emscripten/debug/rustext.wasm"
+web.release.threads.wasm32 = "res://../rust/target/wasm32-unknown-emscripten/release/rustext.wasm"
+web.debug.wasm32 =           "res://../rust/target/wasm32-unknown-emscripten/debug/rustext.wasm"
+web.release.wasm32 =         "res://../rust/target/wasm32-unknown-emscripten/release/rustext.wasm"
+android.debug.arm64 =        "res://../rust/target/aarch64-linux-android/debug/librustext.so"
+android.release.arm64 =      "res://../rust/target/aarch64-linux-android/release/librustext.so"

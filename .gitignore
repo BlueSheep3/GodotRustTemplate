@@ -1,0 +1,29 @@
+rust/target/
+exports/
+result
+godot/android/
+
+# godot .gitignore template from:
+# https://github.com/github/gitignore/blob/main/Godot.gitignore
+# and then adjusted for this project's file structure
+
+# Godot 4.2+ specific ignores
+godot/~*.dll
+
+# Godot 4+ specific ignores
+godot/.godot/
+godot/.nomedia
+
+# Godot-specific ignores
+godot/.import/
+godot/export.cfg
+godot/export_credentials.cfg
+godot/*.tmp
+
+# Imported translations (automatically generated from CSV files)
+godot/*.translation
+
+# Mono-specific ignores
+godot/.mono/
+godot/data_*/
+godot/mono_crash.*.json

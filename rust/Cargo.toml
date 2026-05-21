@@ -1,0 +1,35 @@
+[package]
+name = "rustext"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+authors = ["BlueSheep3"]
+repository = "https://github.com/BlueSheep3/GodotRustTemplate"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = [
+	"godot/api-4-6"
+]
+# you must enable this feature when compiling to android
+android = [
+	# there is currently a bug that requires this feature to be enabled:
+	# https://github.com/godot-rust/gdext/issues/1423#issuecomment-3829488640
+	"godot/experimental-threads",
+]
+# you must enable this feature when compiling to web assembly
+# requires --no-default-features due to conflicting godot api version
+wasm = [
+	"godot/api-custom",
+	"godot/experimental-wasm",
+	"godot/lazy-function-tables",
+]
+# some websites don't like multithreading, so you can disable it here
+# the wasm feature must be enabled when enabling this one
+nothreads = ["godot/experimental-wasm-nothreads"]
+
+
+[dependencies]
+godot = "0.5"
