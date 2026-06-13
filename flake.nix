@@ -6,7 +6,7 @@
 # but this should have support for more systems in the future.
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     naersk = {
       url = "github:nix-community/naersk";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -393,10 +393,18 @@
         #                                WEB ASSEMBLY                                 #
         ###############################################################################
 
+        # because of the following issue, this needs a slightly older version of nightly:
+        # https://github.com/godot-rust/gdext/issues/1119#issuecomment-4654775861
+        older-rust-toolchain = inputs'.fenix.packages.toolchainOf {
+          channel = "nightly";
+          date = "2026-05-31";
+          sha256 = "sha256-1BAa+bv40O6I+/H4J5T6Ammxhby0y/4OqMrMVCywq8Q=";
+        };
         wasm-toolchain = with inputs'.fenix.packages;
           combine [
-            complete.toolchain
-            targets.wasm32-unknown-emscripten.latest.rust-std
+            # FIXME the exact way of specifying these doesn't compile
+            older-rust-toolchain.toolchain
+            older-rust-toolchain.targets.wasm32-unknown-emscripten.latest.rust-std
           ];
         naersk-wasm = pkgs.callPackage naersk {
           cargo = wasm-toolchain;
@@ -409,18 +417,10 @@
 
           nativeBuildInputs = [
             pkgs.emscripten
-            godot
-            pkgs.llvmPackages.clang-unwrapped.lib
           ];
 
-          LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib";
-
-          # add in the dependencies of std to be able to build it (with -Zbuild-std)
-          # https://github.com/nix-community/naersk/issues/146#issuecomment-2176827359
-          additionalCargoLock = "${inputs'.fenix.packages.complete.rust-src}/lib/rustlib/src/rust/library/Cargo.lock";
-
-          # during this build godot will be called, which needs a home
-          cargoBuild = oldCmd: ''export HOME="$(mktemp -d)"; cargo build --no-default-features --features=wasm,nothreads -Zbuild-std --target=wasm32-unknown-emscripten --release'';
+          # cargoBuild = oldCmd: ''cargo build --no-default-features --features=wasm,nothreads --target=wasm32-unknown-emscripten --release'';
+          cargoBuildOptions = prev: prev ++ ["--no-default-features" "--features=wasm,nothreads" "--target=wasm32-unknown-emscripten"];
         };
         rustext-wasm-no-threads =
           extract-target-dir
@@ -500,10 +500,7 @@
 
           buildInputs = [
             pkgs.emscripten
-            pkgs.llvmPackages.clang-unwrapped.lib
           ];
-
-          LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib";
         };
 
         ###############################################################################
