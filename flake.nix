@@ -395,16 +395,15 @@
 
         # because of the following issue, this needs a slightly older version of nightly:
         # https://github.com/godot-rust/gdext/issues/1119#issuecomment-4654775861
-        older-rust-toolchain = inputs'.fenix.packages.toolchainOf {
+        older-toolchain-options = {
           channel = "nightly";
           date = "2026-05-31";
           sha256 = "sha256-1BAa+bv40O6I+/H4J5T6Ammxhby0y/4OqMrMVCywq8Q=";
         };
         wasm-toolchain = with inputs'.fenix.packages;
           combine [
-            # FIXME the exact way of specifying these doesn't compile
-            older-rust-toolchain.toolchain
-            older-rust-toolchain.targets.wasm32-unknown-emscripten.latest.rust-std
+            (toolchainOf older-toolchain-options).toolchain
+            (targets.wasm32-unknown-emscripten.toolchainOf older-toolchain-options).rust-std
           ];
         naersk-wasm = pkgs.callPackage naersk {
           cargo = wasm-toolchain;
@@ -417,9 +416,9 @@
 
           nativeBuildInputs = [
             pkgs.emscripten
+            godot
           ];
 
-          # cargoBuild = oldCmd: ''cargo build --no-default-features --features=wasm,nothreads --target=wasm32-unknown-emscripten --release'';
           cargoBuildOptions = prev: prev ++ ["--no-default-features" "--features=wasm,nothreads" "--target=wasm32-unknown-emscripten"];
         };
         rustext-wasm-no-threads =
