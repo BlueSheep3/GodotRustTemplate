@@ -1,4 +1,4 @@
-# this code is based on:
+# the android part of this flake is based on:
 # https://woile.dev/blog/android-apps-with-slint-on-nixos.html
 #
 # FIXME This flake currently contains a bunch of system dependant stuff.
@@ -44,6 +44,14 @@
         # includes export templates other than just native
         godot-export-templates = pkgs.godotPackages_4_6.export-templates-bin;
 
+        # set this to true if you have .blend files in your project
+        depends-on-blender = false;
+        blender = pkgs.blender;
+        maybe-blender-list =
+          if depends-on-blender
+          then [blender]
+          else [];
+
         ###############################################################################
         #                               NATIVE / LINUX                                #
         ###############################################################################
@@ -62,10 +70,12 @@
           inherit version;
           src = ./godot;
 
-          nativeBuildInputs = [
-            rustext-native
-            godot
-          ];
+          nativeBuildInputs =
+            [
+              rustext-native
+              godot
+            ]
+            ++ maybe-blender-list;
 
           buildPhase = ''
             runHook preBuild
@@ -83,12 +93,25 @@
             export HOME="$(mktemp -d)"
             mkdir -p "$HOME/.local/share/godot/"
             ln -s '${godot.export-template}/share/godot/export_templates' "$HOME/.local/share/godot/"
-            mkdir -p export
 
+            ${
+              if depends-on-blender
+              then ''
+                mkdir -p "$HOME/.config/godot/"
+                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                [gd_resource type="EditorSettings" format=3]
+                [resource]
+                filesystem/import/blender/blender_path = "${blender}/bin/blender"
+                EOF
+              ''
+              else ""
+            }
+
+            mkdir -p export
             # there is some really weird crash here that happens when godot closes
             # this causes this step to fail, even though godot actually does export the game
-            godot --headless --path 'godot' --export-release 'Linux x86_64' '../export/${name}' 2>stderr || true
-            grep 'handle_crash: Program crashed with signal 11' stderr
+            # it seems to sometimes happen, and sometimes not, so i can't check for it here
+            godot --headless --path 'godot' --export-release 'Linux x86_64' '../export/${name}' || true
 
             runHook postBuild
           '';
@@ -173,15 +196,17 @@
           inherit version;
           src = ./godot;
 
-          nativeBuildInputs = [
-            rustext-android
-            rustext-native
-            godot
-            godot-export-templates
-            pkgs.jdk
-            android-sdk
-            pkgs.zstd
-          ];
+          nativeBuildInputs =
+            [
+              rustext-android
+              rustext-native
+              godot
+              godot-export-templates
+              pkgs.jdk
+              android-sdk
+              pkgs.zstd
+            ]
+            ++ maybe-blender-list;
 
           buildPhase = ''
             runHook preBuild
@@ -212,6 +237,11 @@
             [resource]
             export/android/java_sdk_path = "${pkgs.jdk}/lib/openjdk"
             export/android/android_sdk_path = "${androidComp.androidsdk}/libexec/android-sdk"
+            ${
+              if depends-on-blender
+              then "filesystem/import/blender/blender_path = \"${blender}/bin/blender\""
+              else ""
+            }
             EOF
 
             mkdir -p export
@@ -299,12 +329,14 @@
           inherit version;
           src = ./godot;
 
-          nativeBuildInputs = [
-            rustext-wasm-no-threads
-            rustext-native
-            godot
-            godot-export-templates
-          ];
+          nativeBuildInputs =
+            [
+              rustext-wasm-no-threads
+              rustext-native
+              godot
+              godot-export-templates
+            ]
+            ++ maybe-blender-list;
 
           buildPhase = ''
             runHook preBuild
@@ -322,29 +354,42 @@
             export HOME="$(mktemp -d)"
             mkdir -p "$HOME/.local/share/godot/"
             ln -s '${godot-export-templates}/share/godot/export_templates' "$HOME/.local/share/godot/"
-            mkdir -p export
+            ${
+              if depends-on-blender
+              then ''
+                mkdir -p "$HOME/.config/godot/"
+                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                [gd_resource type="EditorSettings" format=3]
+                [resource]
+                filesystem/import/blender/blender_path = "${blender}/bin/blender"
+                EOF
+              ''
+              else ""
+            }
 
+            mkdir -p export
             # there is some really weird crash here that happens when godot closes
             # this causes this step to fail, even though godot actually does export the game
-            godot --headless --path 'godot' --export-release 'Web' '../export/${name}.html' 2>stderr || true
-            grep 'handle_crash: Program crashed with signal 11' stderr
+            # it seems to sometimes happen, and sometimes not, so i can't check for it here
+            godot --headless --path 'godot' --export-release 'Web' '../export/${name}.html' || true
 
             runHook postBuild
           '';
 
           installPhase = ''
             runHook preInstall
+            mv 'export/${name}.html' 'export/index.html'
+            install -D -m 644 -t "$out/libexec" "export/index.html"
+            install -D -m 644 -t "$out/libexec" "export/rustext.wasm"
             install -D -m 644 -t "$out/libexec" "export/${name}.apple-touch-icon.png"
             install -D -m 644 -t "$out/libexec" "export/${name}.audio.position.worklet.js"
             install -D -m 644 -t "$out/libexec" "export/${name}.audio.worklet.js"
-            install -D -m 644 -t "$out/libexec" "export/${name}.html"
             install -D -m 644 -t "$out/libexec" "export/${name}.icon.png"
             install -D -m 644 -t "$out/libexec" "export/${name}.js"
             install -D -m 644 -t "$out/libexec" "export/${name}.pck"
             install -D -m 644 -t "$out/libexec" "export/${name}.png"
             install -D -m 644 -t "$out/libexec" "export/${name}.side.wasm"
             install -D -m 644 -t "$out/libexec" "export/${name}.wasm"
-            install -D -m 644 -t "$out/libexec" "export/rustext.wasm"
             runHook postInstall
           '';
         };
