@@ -128,6 +128,108 @@
         };
 
         ###############################################################################
+        #                                   WINDOWS                                   #
+        ###############################################################################
+
+        win-toolchain = with inputs'.fenix.packages;
+          combine [
+            complete.toolchain
+            targets.x86_64-pc-windows-gnu.latest.rust-std
+          ];
+        naersk-win = pkgs.callPackage naersk {
+          cargo = win-toolchain;
+          rustc = win-toolchain;
+        };
+        rustext-tar-win = naersk-win.buildPackage {
+          name = "${name}-win-rustext";
+          src = ./rust;
+          copyTarget = true;
+
+          strictDeps = true;
+          depsBuildBuild = [pkgs.pkgsCross.mingwW64.stdenv.cc];
+          buildInputs = [pkgs.pkgsCross.mingwW64.windows.pthreads];
+
+          CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+          CARGO_BUILD_RUSTFLAGS = [
+            "-L"
+            "native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib"
+          ];
+        };
+        rustext-win = pkgs.stdenv.mkDerivation {
+          name = "${name}-rustext-win";
+          src = "${rustext-tar-win}";
+          nativeBuildInputs = [pkgs.zstd];
+
+          installPhase = ''
+            tar -xf "$src/target.tar.zst"
+            mkdir -p "$out/lib"
+            mv 'target/x86_64-pc-windows-gnu/release/rustext.dll' "$out/lib/rustext.dll"
+          '';
+        };
+        game-win = pkgs.stdenv.mkDerivation {
+          pname = "${name}-win";
+          inherit version;
+          src = ./godot;
+
+          nativeBuildInputs =
+            [
+              rustext-win
+              rustext-native
+              godot
+              godot-export-templates
+            ]
+            ++ maybe-blender-list;
+
+          buildPhase = ''
+            runHook preBuild
+
+            mkdir -p "godot"
+            shopt -s extglob
+            mv !(godot) "godot"
+            shopt -u extglob
+
+            # godot requires a debug version of the native library to use before exporting
+            # unlike other targets, the win export expects the library to be directly in release
+            mkdir -p 'rust/target/release' 'rust/target/debug'
+            ln -s '${rustext-native}/lib/librustext.so' 'rust/target/debug/librustext.so'
+            ln -s '${rustext-win}/lib/rustext.dll' 'rust/target/release/rustext.dll'
+
+            export HOME="$(mktemp -d)"
+            mkdir -p "$HOME/.local/share/godot/"
+            ln -s '${godot-export-templates}/share/godot/export_templates' "$HOME/.local/share/godot/"
+
+            ${
+              if depends-on-blender
+              then ''
+                mkdir -p "$HOME/.config/godot/"
+                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                [gd_resource type="EditorSettings" format=3]
+                [resource]
+                filesystem/import/blender/blender_path = "${blender}/bin/blender"
+                EOF
+              ''
+              else ""
+            }
+
+            mkdir -p export
+            # there is some really weird crash here that happens when godot closes
+            # this causes this step to fail, even though godot actually does export the game
+            # it seems to sometimes happen, and sometimes not, so i can't check for it here
+            godot --headless --path 'godot' --export-release 'Windows x86_64' '../export/${name}.exe' || true
+
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            install -D -m 755 -t "$out/libexec" "export/${name}.exe"
+            install -D -m 644 -t "$out/libexec" "export/${name}.pck"
+            install -D -m 644 -t "$out/libexec" "export/rustext.dll"
+            runHook postInstall
+          '';
+        };
+
+        ###############################################################################
         #                                   ANDROID                                   #
         ###############################################################################
 
@@ -411,6 +513,7 @@
         game-all = pkgs.runCommand "${name}-all" {} ''
           mkdir -p "$out"
           ln -s "${game-linux}/libexec" "$out/linux"
+          ln -s "${game-win}/libexec" "$out/win"
           ln -s "${game-android}/libexec" "$out/android"
           ln -s "${game-wasm-no-threads}/libexec" "$out/web"
         '';
@@ -429,10 +532,12 @@
         packages = {
           inherit
             rustext-native
+            rustext-win
             rustext-android
             rustext-wasm-no-threads
             # rustext-wasm-threads
             game-linux
+            game-win
             game-android
             game-wasm-no-threads
             # game-wasm-threads
