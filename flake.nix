@@ -52,6 +52,19 @@
           then [blender]
           else [];
 
+        extract-target-dir = tarpkg: targetname: dir: libname:
+          pkgs.stdenv.mkDerivation {
+            name = "${name}-rustext-${targetname}";
+            src = "${tarpkg}";
+            nativeBuildInputs = [pkgs.zstd];
+
+            installPhase = ''
+              tar -xf "$src/target.tar.zst"
+              mkdir -p "$out/lib"
+              mv '${dir}/${libname}' "$out/lib/${libname}"
+            '';
+          };
+
         ###############################################################################
         #                               NATIVE / LINUX                                #
         ###############################################################################
@@ -155,17 +168,10 @@
             "native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib"
           ];
         };
-        rustext-win = pkgs.stdenv.mkDerivation {
-          name = "${name}-rustext-win";
-          src = "${rustext-tar-win}";
-          nativeBuildInputs = [pkgs.zstd];
-
-          installPhase = ''
-            tar -xf "$src/target.tar.zst"
-            mkdir -p "$out/lib"
-            mv 'target/x86_64-pc-windows-gnu/release/rustext.dll' "$out/lib/rustext.dll"
-          '';
-        };
+        rustext-win =
+          extract-target-dir
+          rustext-tar-win "win"
+          "target/x86_64-pc-windows-gnu/release" "rustext.dll";
         game-win = pkgs.stdenv.mkDerivation {
           pname = "${name}-win";
           inherit version;
@@ -266,7 +272,7 @@
           cargo = android-toolchain;
           rustc = android-toolchain;
         };
-        rustext-android = naersk-android.buildPackage {
+        rustext-tar-android = naersk-android.buildPackage {
           name = "${name}-android-rustext";
           src = ./rust;
           copyTarget = true;
@@ -293,6 +299,10 @@
             ]
           }";
         };
+        rustext-android =
+          extract-target-dir
+          rustext-tar-android "android"
+          "target/release/apk/lib/arm64-v8a" "librustext.so";
         game-android = pkgs.stdenv.mkDerivation {
           pname = "${name}-android";
           inherit version;
@@ -324,10 +334,7 @@
             # godot requires a debug version of the native library to use before exporting
             mkdir -p 'rust/target/aarch64-linux-android/debug' 'rust/target/debug'
             ln -s '${rustext-native}/lib/librustext.so' 'rust/target/debug/librustext.so'
-            cd rust
-            tar -xf '${rustext-android}/target.tar.zst' 'target/release/apk/lib/arm64-v8a/librustext.so'
-            ln -s '../../release/apk/lib/arm64-v8a/librustext.so' 'target/aarch64-linux-android/debug/librustext.so'
-            cd ..
+            ln -s '${rustext-android}/lib/librustext.so' 'rust/target/aarch64-linux-android/debug/librustext.so'
 
             export HOME="$(mktemp -d)"
             mkdir -p "$HOME/.local/share/godot/"
@@ -395,8 +402,8 @@
           cargo = wasm-toolchain;
           rustc = wasm-toolchain;
         };
-        rustext-wasm-tar-no-threads = naersk-wasm.buildPackage {
-          name = "${name}-rustext-wasm-tar-no-threads";
+        rustext-tar-wasm-no-threads = naersk-wasm.buildPackage {
+          name = "${name}-rustext-tar-wasm-no-threads";
           src = ./rust;
           copyTarget = true;
 
@@ -415,17 +422,10 @@
           # during this build godot will be called, which needs a home
           cargoBuild = oldCmd: ''export HOME="$(mktemp -d)"; cargo build --no-default-features --features=wasm,nothreads -Zbuild-std --target=wasm32-unknown-emscripten --release'';
         };
-        rustext-wasm-no-threads = pkgs.stdenv.mkDerivation {
-          name = "${name}-rustext-wasm-no-threads";
-          src = "${rustext-wasm-tar-no-threads}";
-          nativeBuildInputs = [pkgs.zstd];
-
-          installPhase = ''
-            tar -xf "$src/target.tar.zst"
-            mkdir -p "$out/lib"
-            mv 'target/wasm32-unknown-emscripten/release/rustext.wasm' "$out/lib/rustext.wasm"
-          '';
-        };
+        rustext-wasm-no-threads =
+          extract-target-dir
+          rustext-tar-wasm-no-threads "wasm-no-threads"
+          "target/wasm32-unknown-emscripten/release" "rustext.wasm";
         game-wasm-no-threads = pkgs.stdenv.mkDerivation {
           pname = "${name}-wasm-no-threads";
           inherit version;
