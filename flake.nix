@@ -417,9 +417,18 @@
           nativeBuildInputs = [
             pkgs.emscripten
             godot
+            pkgs.llvmPackages.clang-unwrapped.lib
           ];
 
-          cargoBuildOptions = prev: prev ++ ["--no-default-features" "--features=wasm,nothreads" "--target=wasm32-unknown-emscripten"];
+          LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib";
+
+          # FIXME currently, wasm can't build.
+          # it seems like godot-core is just wrong with some wasm specific code.
+          # for example, there is a call to ok_or_else on the return of get_root,
+          # which no longer returns an Option.
+
+          # during this build godot will be called, which needs a home
+          cargoBuild = oldCmd: ''HOME="$(mktemp -d)" cargo build --no-default-features --features=wasm,nothreads --target=wasm32-unknown-emscripten --release'';
         };
         rustext-wasm-no-threads =
           extract-target-dir
