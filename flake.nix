@@ -40,9 +40,9 @@
         version = "0.0.0";
 
         # includes native export template
-        godot = pkgs.godotPackages_4_6.godot;
+        godot = pkgs.godotPackages_4_7.godot;
         # includes export templates other than just native
-        godot-export-templates = pkgs.godotPackages_4_6.export-templates-bin;
+        godot-export-templates = pkgs.godotPackages_4_7.export-templates-bin;
 
         # set this to true if you have .blend files in your project
         depends-on-blender = false;
@@ -111,7 +111,7 @@
               if depends-on-blender
               then ''
                 mkdir -p "$HOME/.config/godot/"
-                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                cat >"$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
                 [gd_resource type="EditorSettings" format=3]
                 [resource]
                 filesystem/import/blender/blender_path = "${blender}/bin/blender"
@@ -208,7 +208,7 @@
               if depends-on-blender
               then ''
                 mkdir -p "$HOME/.config/godot/"
-                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                cat >"$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
                 [gd_resource type="EditorSettings" format=3]
                 [resource]
                 filesystem/import/blender/blender_path = "${blender}/bin/blender"
@@ -341,7 +341,7 @@
             ln -s '${godot-export-templates}/share/godot/export_templates' "$HOME/.local/share/godot/"
 
             mkdir -p "$HOME/.config/godot/"
-            cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+            cat >"$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
             [gd_resource type="EditorSettings" format=3]
             [resource]
             export/android/java_sdk_path = "${pkgs.jdk}/lib/openjdk"
@@ -459,7 +459,7 @@
               if depends-on-blender
               then ''
                 mkdir -p "$HOME/.config/godot/"
-                cat >"$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+                cat >"$HOME/.config/godot/editor_settings-4.7.tres" <<EOF
                 [gd_resource type="EditorSettings" format=3]
                 [resource]
                 filesystem/import/blender/blender_path = "${blender}/bin/blender"
